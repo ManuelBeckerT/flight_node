@@ -132,7 +132,7 @@
           });
           flightPath.setMap(map);
 
-          aviones[vuelo.code] = vuelos;
+          aviones[vuelo.code] = vuelo;
           console.log('PLANE ' + aviones)
 
         };
@@ -170,7 +170,7 @@
           var information = {
             coords: {lat:data.position[0], lng: data.position[1]},
             iconImage:'https://developers.google.com/maps/documentation/javascript/examples/full/images/beachflag.png',
-            content:'<h2>Vuelo '+ data.code + ' ('+  +')' +'</h2>\n<h3>Salida: '+ +'</h3>\n<h3>Salida: '+  +'</h3>\n<h3>Asientos: '+ +'</h3>'
+            content:'<h2>Vuelo '+ data.code + ' ('+ plane_data.airline +')' +'</h2>\n<h3>Salida: '+ plane_data.origin.name +'</h3>\n<h3>Llegada: '+ plane_data.destination.name +'</h3>\n<h3>Asientos: '+ plane_data.seats+'</h3>'
           };
           markers[data.code] = addPlane(information, map);
         }
