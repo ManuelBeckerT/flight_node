@@ -4,14 +4,6 @@
     <meta charset="utf-8"/>
     <title>GOOGLE FLIGHTS</title>
     <style>
-      * { margin: 0; padding: 0; box-sizing: border-box; }
-      body { font: 13px Helvetica, Arial; }
-      form { background: #000; padding: 3px; position: fixed; bottom: 0; width: 100%; }
-      form input { border: 0; padding: 10px; width: 90%; margin-right: .5%; }
-      form button { width: 9%; background: rgb(130, 224, 255); border: none; padding: 10px; }
-      #messages { list-style-type: none; margin: 0; padding: 0; }
-      #messages li { padding: 5px 10px; }
-      #messages li:nth-child(odd) { background: #eee; }
 
       #map {
         height: 550px;  /* The height is 400 pixels */
@@ -32,89 +24,133 @@
     <script src="./node_modules/socket.io/node_modules/socket.io-client/dist/socket.io.js"></script>
     <script src="https://code.jquery.com/jquery-1.11.1.js"></script>
     <script>
+
+    var map;
+    function initMap() {
+      // Information of Location
+      var location = {lat:42.3601, lng: -71.0589}
+      var options = {
+        zoom:2,
+        center: location
+      }
+
+      // The map centered at Location
+      map = new google.maps.Map(
+          document.getElementById('map'), options);
+
+      /*
+      // The marker, positioned at Uluru
+      var marker = new google.maps.Marker({
+        position: location,
+        map: map,
+        icon: 'https://developers.google.com/maps/documentation/javascript/examples/full/images/beachflag.png'
+      });
+
+      var infoWindow = new google.maps.infoWindow({
+        content:'<h1>Lynn Ma</h1>'
+      });
+
+      marker.addListener('click', function(){
+        infoWindow.open(map, marker);
+      });
+      */
+
+    }
+
+    function addAirport(props, map){
+      var marker = new google.maps.Marker({
+        position:props.coords,
+        map:map,
+      });
+
+      // Check content
+      if (props.content){
+        var infoWindow = new google.maps.InfoWindow({
+          content:props.content
+        });
+        marker.addListener('mouseover', function(){
+          infoWindow.open(map, marker);
+        });
+        marker.addListener('mouseout', function() {
+          infoWindow.close();
+        });
+      }
+
+    }
+
+      // Iniciando conexion al socket
       var socket = io.connect('wss://integracion-tarea-3.herokuapp.com', {
         "path": "/flights"
       });
 
-      socket.on('POSITION', function(data){
-        console.log('Avion: '+ data.code +' Posicion: ' + data.position);
+      socket.emit('AIRPORTS', {'a':''});
+      socket.on('AIRPORTS', function(msg){
+        console.log('Airport: ' + msg);
+        var keys = Object.keys(msg);
+        for (var i = 0; i < keys.length; i++){
+          var airport = msg[keys[i]];
+          marker_data = {
+            coords: {lat:airport.airport_position[0], lng: airport.airport_position[1]},
+            iconImage:'plane/blue_plane.png',
+            content:'<h2>'+ airport.name + ' ('+ airport.airport_code +')' +'</h2>\n<h3>'+ airport.city +', ' + airport.country + ' ('+ airport.country_code +')' +'</h3>'
+          };
+          addAirport(marker_data, map);
+        };
       });
 
       socket.emit('FLIGHTS', {'a':''});
-      socket.on('chat message', function(msg){
-        console.log('Flight: ' + msg.code);
+      socket.on('FLIGHTS', function(vuelos){
+        console.log('Flight: ' + vuelos[0].origin.airport_position[0]);
+        for (var i = 0; i < vuelos.length; i++){
+          var vuelo = vuelos[i];
+          var origin = vuelo.origin;
+          var destination = vuelo.destination;
+          var line_data = [
+            {lat: destination.airport_position[0], lng: destination.airport_position[1]},
+            {lat: origin.airport_position[0], lng: origin.airport_position[1]}
+          ];
+          var flightPath = new google.maps.Polyline({
+            path: line_data,
+            geodesic: true,
+            strokeColor: '#000000',
+            strokeOpacity: 1.0,
+            strokeWeight: 2
+          });
+
+          flightPath.setMap(map);
+
+        };
       });
 
-        // Initialize and add the map
-        function initMap() {
-          // Information of Location
-          var location = {lat:42.3601, lng: -71.0589}
-          var options = {
-            zoom:2,
-            center: location
-          }
 
-          // The map centered at Location
-          var map = new google.maps.Map(
-              document.getElementById('map'), options);
 
-          /*
-          // The marker, positioned at Uluru
-          var marker = new google.maps.Marker({
-            position: location,
-            map: map,
-            icon: 'https://developers.google.com/maps/documentation/javascript/examples/full/images/beachflag.png'
-          });
+      // Initialize and add the map
+      // Add Marker function
 
-          var infoWindow = new google.maps.infoWindow({
-            content:'<h1>Lynn Ma</h1>'
-          });
-
-          marker.addListener('click', function(){
-            infoWindow.open(map, marker);
-          });
-          */
-          var markers = [
-            {
-              coords:location,
-              iconImage:'https://developers.google.com/maps/documentation/javascript/examples/full/images/beachflag.png',
-              content:'<h1>HELLOW WORLD</h1>\n<h2>Tarolas</h2>'
-            }
-          ];
-
-          // Loop through markers
-          for (var i = 0; i < markers.length; i++){
-            addMarker(markers[i]);
-          }
-          // Add Marker function
-          function addMarker(props){
-            var marker = new google.maps.Marker({
-              position:props.coords,
-              map:map,
-              icon: props.iconImage
-            });
-
-            // Check content
-            if (props.content){
-              var infoWindow = new google.maps.InfoWindow({
-                content:props.content
-              });
-              marker.addListener('mouseover', function(){
-                infoWindow.open(map, marker);
-              });
-              marker.addListener('mouseout', function() {
-                infoWindow.close();
-              });
-            }
-
-          }
-
+      /*var markers = [
+        {
+          coords:location,
+          iconImage:'https://developers.google.com/maps/documentation/javascript/examples/full/images/beachflag.png',
+          content:'<h1>HELLOW WORLD</h1>\n<h2>Tarolas</h2>'
         }
+      ];
 
+      // Loop through markers
+      for (var i = 0; i < markers.length; i++){
+        addMarker(markers[i], map);
+      }*/
 
+      // Recibo la informacion del socket al hacer socket.on POSITION
+      socket.on('POSITION', function(data){
+        console.log('Avion: '+ data.code +' Posicion: ' + data.position);
+        marker_data = {
 
-
-
+          coords: {lat:data.position[0], lng: data.position[1]},
+          iconImage:'https://developers.google.com/maps/documentation/javascript/examples/full/images/beachflag.png',
+          content:'<h1>'+ data.code +'</h1>'
+        };
+        addMarker(marker_data, map);
+      });
 
     </script>
     <script async defer
