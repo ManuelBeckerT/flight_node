@@ -6,7 +6,7 @@
     <style>
 
       #map {
-        height: 550px;  /* The height is 400 pixels */
+        height: 650px;  /* The height is 400 pixels */
         width: 100%;  /* The width is the width of the web page */
        }
     </style>
@@ -25,58 +25,71 @@
     <script src="https://code.jquery.com/jquery-1.11.1.js"></script>
     <script>
 
-    var map;
-    function initMap() {
-      // Information of Location
-      var location = {lat:42.3601, lng: -71.0589}
-      var options = {
-        zoom:2,
-        center: location
+      var map;
+      function initMap() {
+        // Information of Location
+        var location = {lat:42.3601, lng: -71.0589}
+        var options = {
+          zoom:2,
+          center: location
+        }
+
+        // The map centered at Location
+        map = new google.maps.Map(
+            document.getElementById('map'), options);
       }
 
-      // The map centered at Location
-      map = new google.maps.Map(
-          document.getElementById('map'), options);
+      function changeMarkerPosition(marker, position) {
+        var latlng = new google.maps.LatLng(position[0], position[1]);
+        marker.setPosition(latlng);
+      };
 
-      /*
-      // The marker, positioned at Uluru
-      var marker = new google.maps.Marker({
-        position: location,
-        map: map,
-        icon: 'https://developers.google.com/maps/documentation/javascript/examples/full/images/beachflag.png'
-      });
-
-      var infoWindow = new google.maps.infoWindow({
-        content:'<h1>Lynn Ma</h1>'
-      });
-
-      marker.addListener('click', function(){
-        infoWindow.open(map, marker);
-      });
-      */
-
-    }
-
-    function addAirport(props, map){
-      var marker = new google.maps.Marker({
-        position:props.coords,
-        map:map,
-      });
-
-      // Check content
-      if (props.content){
-        var infoWindow = new google.maps.InfoWindow({
-          content:props.content
+      function addAirport(props, map){
+        var marker = new google.maps.Marker({
+          position:props.coords,
+          map:map,
         });
-        marker.addListener('mouseover', function(){
-          infoWindow.open(map, marker);
-        });
-        marker.addListener('mouseout', function() {
-          infoWindow.close();
-        });
+
+        // Check content
+        if (props.content){
+          var infoWindow = new google.maps.InfoWindow({
+            content:props.content
+          });
+          marker.addListener('mouseover', function(){
+            infoWindow.open(map, marker);
+          });
+          marker.addListener('mouseout', function() {
+            infoWindow.close();
+          });
+        }
+
       }
 
-    }
+      function addPlane(props, map){
+
+        var marker = new google.maps.Marker({
+          position:props.coords,
+          map:map,
+          icon: props.iconImage
+        });
+
+
+        // Check content
+        if (props.content){
+          var infoWindow = new google.maps.InfoWindow({
+            content:props.content
+          });
+          marker.addListener('mouseover', function(){
+            infoWindow.open(map, marker);
+          });
+          marker.addListener('mouseout', function() {
+            infoWindow.close();
+          });
+        };
+        return marker;
+
+
+      }
 
       // Iniciando conexion al socket
       var socket = io.connect('wss://integracion-tarea-3.herokuapp.com', {
@@ -98,9 +111,10 @@
         };
       });
 
+      var aviones = {};
       socket.emit('FLIGHTS', {'a':''});
       socket.on('FLIGHTS', function(vuelos){
-        console.log('Flight: ' + vuelos[0].origin.airport_position[0]);
+        console.log('Flight: ' + vuelos[0].airline);
         for (var i = 0; i < vuelos.length; i++){
           var vuelo = vuelos[i];
           var origin = vuelo.origin;
@@ -116,40 +130,50 @@
             strokeOpacity: 1.0,
             strokeWeight: 2
           });
-
           flightPath.setMap(map);
+
+          aviones[vuelo.code] = vuelos;
+          console.log('PLANE ' + aviones)
 
         };
       });
 
-
-
-      // Initialize and add the map
-      // Add Marker function
-
-      /*var markers = [
-        {
-          coords:location,
-          iconImage:'https://developers.google.com/maps/documentation/javascript/examples/full/images/beachflag.png',
-          content:'<h1>HELLOW WORLD</h1>\n<h2>Tarolas</h2>'
-        }
-      ];
-
-      // Loop through markers
-      for (var i = 0; i < markers.length; i++){
-        addMarker(markers[i], map);
-      }*/
-
       // Recibo la informacion del socket al hacer socket.on POSITION
+      var markers = {};
+      var current_position = {};
       socket.on('POSITION', function(data){
         console.log('Avion: '+ data.code +' Posicion: ' + data.position);
-        marker_data = {
-
+        /*marker_data = {
           coords: {lat:data.position[0], lng: data.position[1]},
           iconImage:'https://developers.google.com/maps/documentation/javascript/examples/full/images/beachflag.png',
           content:'<h1>'+ data.code +'</h1>'
-        };
-        addMarker(marker_data, map);
+        };*/
+        if (markers[data.code]){
+          changeMarkerPosition(markers[data.code], data.position, map);
+          var line_data = [
+            {lat: current_position[data.code][0], lng: current_position[data.code][1]},
+            {lat: data.position[0], lng: data.position[1]}
+          ];
+          var flightPath = new google.maps.Polyline({
+            path: line_data,
+            geodesic: true,
+            strokeColor: '#FE642E',
+            strokeOpacity: 1.0,
+            strokeWeight: 5
+          });
+          flightPath.setMap(map);
+          current_position[data.code] = data.position;
+        }
+        else{
+          current_position[data.code] = data.position;
+          var plane_data = aviones[data.code];
+          var information = {
+            coords: {lat:data.position[0], lng: data.position[1]},
+            iconImage:'https://developers.google.com/maps/documentation/javascript/examples/full/images/beachflag.png',
+            content:'<h2>Vuelo '+ data.code + ' ('+  +')' +'</h2>\n<h3>Salida: '+ +'</h3>\n<h3>Salida: '+  +'</h3>\n<h3>Asientos: '+ +'</h3>'
+          };
+          markers[data.code] = addPlane(information, map);
+        }
       });
 
     </script>
