@@ -6,7 +6,7 @@
     <style>
 
       #map {
-        height: 650px;  /* The height is 400 pixels */
+        height: 700px;  /* The height is 400 pixels */
         width: 100%;  /* The width is the width of the web page */
        }
     </style>
@@ -39,9 +39,21 @@
             document.getElementById('map'), options);
       }
 
-      function changeMarkerPosition(marker, position) {
+      function changeMarkerPosition(marker, position, angle) {
         var latlng = new google.maps.LatLng(position[0], position[1]);
         marker.setPosition(latlng);
+        if (angle > 360){
+          angle = angle - 360
+        }
+        var planeIcon = {
+            url: "https://cdn1.iconfinder.com/data/icons/ios-11-glyphs/30/airplane_mode_on-256.png", // url
+            scaledSize: new google.maps.Size(50, 50), // scaled size
+            origin: new google.maps.Point(0,0), // origin
+            anchor: new google.maps.Point(25, 25), // anchor
+            rotation: angle
+        };
+        console.log('DEGREE ' + angle)
+        marker.setIcon(planeIcon);
       };
 
       function addAirport(props, map){
@@ -66,11 +78,16 @@
       }
 
       function addPlane(props, map){
-
+        var planeIcon = {
+            url: "https://cdn1.iconfinder.com/data/icons/ios-11-glyphs/30/airplane_mode_on-256.png", // url
+            scaledSize: new google.maps.Size(50, 50), // scaled size
+            origin: new google.maps.Point(0,0), // origin
+            anchor: new google.maps.Point(25, 25) // anchor
+        };
         var marker = new google.maps.Marker({
           position:props.coords,
           map:map,
-          icon: props.iconImage
+          icon: planeIcon
         });
 
 
@@ -104,7 +121,6 @@
           var airport = msg[keys[i]];
           marker_data = {
             coords: {lat:airport.airport_position[0], lng: airport.airport_position[1]},
-            iconImage:'plane/blue_plane.png',
             content:'<h2>'+ airport.name + ' ('+ airport.airport_code +')' +'</h2>\n<h3>'+ airport.city +', ' + airport.country + ' ('+ airport.country_code +')' +'</h3>'
           };
           addAirport(marker_data, map);
@@ -128,7 +144,7 @@
             geodesic: true,
             strokeColor: '#000000',
             strokeOpacity: 1.0,
-            strokeWeight: 2
+            strokeWeight: 5
           });
           flightPath.setMap(map);
 
@@ -149,17 +165,23 @@
           content:'<h1>'+ data.code +'</h1>'
         };*/
         if (markers[data.code]){
-          changeMarkerPosition(markers[data.code], data.position, map);
+          var angleDeg = Math.atan2(current_position[data.code][1] - data.position[1], current_position[data.code][0] - data.position[0]) * 180 / Math.PI;
+          console.log(angleDeg);
+          let angle = Math.PI + Math.atan2(current_position[data.code][0] - data.position[0], current_position[data.code][1] - data.position[1]);
+          console.log(angle * 180 / Math.PI);
+          changeMarkerPosition(markers[data.code], data.position, angle * 180 / Math.PI + 90);
           var line_data = [
             {lat: current_position[data.code][0], lng: current_position[data.code][1]},
             {lat: data.position[0], lng: data.position[1]}
           ];
+
+
           var flightPath = new google.maps.Polyline({
             path: line_data,
             geodesic: true,
             strokeColor: '#FE642E',
             strokeOpacity: 1.0,
-            strokeWeight: 5
+            strokeWeight: 8
           });
           flightPath.setMap(map);
           current_position[data.code] = data.position;
@@ -169,7 +191,6 @@
           var plane_data = aviones[data.code];
           var information = {
             coords: {lat:data.position[0], lng: data.position[1]},
-            iconImage:'https://developers.google.com/maps/documentation/javascript/examples/full/images/beachflag.png',
             content:'<h2>Vuelo '+ data.code + ' ('+ plane_data.airline +')' +'</h2>\n<h3>Salida: '+ plane_data.origin.name +'</h3>\n<h3>Llegada: '+ plane_data.destination.name +'</h3>\n<h3>Asientos: '+ plane_data.seats+'</h3>'
           };
           markers[data.code] = addPlane(information, map);
