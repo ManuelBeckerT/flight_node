@@ -6,12 +6,19 @@
     <style>
 
       #map {
-        height: 700px;  /* The height is 400 pixels */
-        width: 100%;  /* The width is the width of the web page */
+        width: 100%;
+        height: 600px;
+        margin-bottom: 15px;
+        border: 2px solid #fff;
        }
+
+       #map-canvas {
+
+      }
     </style>
   </head>
   <body>
+    <h1>Posición de aviones en tiempo real</h1>
     <div id="map"></div>
 
     <!--Load the API from the specified URL
@@ -33,9 +40,9 @@
       var map;
       function initMap() {
         // Information of Location
-        var location = {lat:42.3601, lng: -71.0589}
+        var location = {lat:-33.4372, lng: -70.6506}
         var options = {
-          zoom:2,
+          zoom:4,
           center: location
         }
 
@@ -157,7 +164,7 @@
             geodesic: true,
             strokeColor: strokeColor,
             strokeOpacity: 1.0,
-            strokeWeight: 5
+            strokeWeight: 8
           });
           flightPath.setMap(map);
 
@@ -192,7 +199,7 @@
             geodesic: true,
             strokeColor: planeLineColor,
             strokeOpacity: 1.0,
-            strokeWeight: 8
+            strokeWeight: 10
           });
           flightPath.setMap(map);
           current_position[data.code] = data.position;
