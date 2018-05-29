@@ -7,18 +7,38 @@
 
       #map {
         width: 100%;
-        height: 600px;
+        height: 500px;
         margin-bottom: 15px;
         border: 2px solid #fff;
        }
 
-       #map-canvas {
-
+       .column {
+          float: left;
+          width: 20%;
       }
+
+      /* Clear floats after the columns */
+      .row:after {
+          content: "";
+          display: table;
+          clear: both;
+      }
+
     </style>
   </head>
   <body>
-    <h1>Posición de aviones en tiempo real</h1>
+    <div style="text-align: center;">
+      <h1><strong>Posición de aviones en tiempo real</strong></h1>
+      <h2>En caso de que no se vean en el mapa los marcadores, por favor volver a <strong>actualizar</strong>.</h2>
+      <div class="row">
+        <div class="column"><h1></h1></div>
+        <div class="column"><p>Se presentan a conitnuación los vuelos entre ciudades. Se muestra en color verde la ruta teórica entre el origen y destino de los aviones</p></div>
+        <div class="column"><h1></h1></div>
+        <div class="column"><p>En azul se muestran los aviones que se encuentran volando entre los aeropuertos. Al pasar sobre los aviones y aeropuertos, se despliega más información.</p></div>
+        <div class="column"><h1></h1></div>
+      </div>
+    </div>
+
     <div id="map"></div>
 
     <!--Load the API from the specified URL
