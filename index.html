@@ -91,7 +91,14 @@
       };
 
       function addAirport(props, map){
+        var icon = {
+          url:'https://cdn2.iconfinder.com/data/icons/location-map-simplicity/512/airport-256.png', // url
+          scaledSize: new google.maps.Size(50, 50), // scaled size
+          anchor: new google.maps.Point(25, 50) // anchor
+        };
         var marker = new google.maps.Marker({
+          icon: icon,
+          scale: 0.5,
           position:props.coords,
           map:map,
         });
@@ -110,6 +117,11 @@
         }
 
       }
+
+      function removeLine(line) {
+        line.setMap(null);
+      }
+
 
       function addPlane(props, map){
         var tent = {
@@ -195,6 +207,7 @@
       // Recibo la informacion del socket al hacer socket.on POSITION
       var markers = {};
       var current_position = {};
+      var current_lines = {};
       socket.on('POSITION', function(data){
         console.log('Avion: '+ data.code +' Posicion: ' + data.position);
         /*marker_data = {
@@ -211,16 +224,37 @@
             {lat: data.position[0], lng: data.position[1]}
           ];
 
+          var vuelo_avion = aviones[data.code];
+          if (Math.abs(current_position[data.code][0] - data.position[0]) > 10 || Math.abs(current_position[data.code][1] - data.position[1]) > 10){
+            console.log('ARRIBADO');
+            socket.emit('FLIGHTS', {'a':''});
+            socket.emit('AIRPORTS', {'a':''});
+            current_position[data.code] = data.position;
+            for (var line = 0; line < current_lines[data.code].length; line++){
+              removeLine(current_lines[data.code][line]);
+            };
+          }
+          else{
+            var flightPath = new google.maps.Polyline({
+              path: line_data,
+              geodesic: true,
+              strokeColor: planeLineColor,
+              strokeOpacity: 1.0,
+              strokeWeight: 7
+            });
+            if (current_lines[data.code]){
+              current_lines[data.code].push(flightPath);
+            }
+            else{
+              current_lines[data.code] = [flightPath];
+            };
 
-          var flightPath = new google.maps.Polyline({
-            path: line_data,
-            geodesic: true,
-            strokeColor: planeLineColor,
-            strokeOpacity: 1.0,
-            strokeWeight: 10
-          });
-          flightPath.setMap(map);
-          current_position[data.code] = data.position;
+            flightPath.setMap(map);
+            current_position[data.code] = data.position;
+          };
+
+
+
         }
         else{
           current_position[data.code] = data.position;
