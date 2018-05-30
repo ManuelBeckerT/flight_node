@@ -1,57 +1,298 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
   <head>
-    <meta charset="utf-8">
-    <title>IO CHAT</title>
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
-    <script src="http://code.jquery.com/jquery-latest.min.js"></script>
-    <script src="/socket.io/socket.io.js"></script>
+    <meta charset="utf-8"/>
+    <title>GOOGLE FLIGHTS</title>
     <style>
-      body{
-        margin-top: 30px;
-      }
-    </style>
 
+      #map {
+        width: 100%;
+        height: 550px;
+        margin-bottom: 15px;
+        border: 2px solid #fff;
+       }
+
+       .column {
+          float: left;
+          width: 100%;
+      }
+
+      /* Clear floats after the columns */
+      .row:after {
+          content: "";
+          display: table;
+          clear: both;
+      }
+
+    </style>
   </head>
   <body>
-    <div class ="container">
-      <div class = "row">
-        <div class = "col-md-4">
-          <div class = "well">
-            <h3>ONLINE USERS</h3>
-            <ul class ="list-group" id="users"></ul>
-          </div>
-        </div>
-        <div class = "col-md-8">
-          <div class = "chat" id = "chat"></div>
-          <form id = "messageForm">
-            <div class = "form-group">
-              <label> Enter message</label>
-              <textarea class = "form-control" id = "message"></textarea>
-              <br />
-              <input type = "submit" class ="btn btn-primary" value = "Send Message" />
-            </div>
-          </form>
-        </div>
+    <div style="text-align: center;">
+      <h1><strong>Posición de aviones en tiempo real</strong></h1>
+      <h3>En caso de que no se vean sobre el mapa los marcadores, por favor volver a <strong>actualizar</strong>.</h3>
+      <div class="row">
+
+        <div class="column"><p>Se presentan a continuación los vuelos entre ciudades. Se muestra en color verde la ruta teórica entre el origen y destino de los aviones. En azul se muestran los aviones que se encuentran volando entre los aeropuertos. Al pasar sobre los aviones y aeropuertos, se despliega más información.</p></div>
+
       </div>
     </div>
+
+    <div id="map"></div>
+
+    <!--Load the API from the specified URL
+    * The async attribute allows the browser to render the page while the API loads
+    * The key parameter will contain your own API key (which is not needed for this tutorial)
+    * The callback parameter executes the initMap() function
+    -->
+
+
+    <script src="./node_modules/socket.io/node_modules/socket.io-client/dist/socket.io.js"></script>
+    <script src="https://code.jquery.com/jquery-1.11.1.js"></script>
     <script>
-      $(function(){
-        var socket = io.connect();
-        var $messageForm = $('#messageForm');
-        var $message = $('#message');
-        var $chat = $('#chat');
 
-        $messageForm.submit(function(e){
-          e.preventDefault();
-          socket.emit('send message', $message.val());
-          $message.val('');
+
+    var planeColor = '#0080FF';
+    var strokeColor = '#40FF00';
+    var planeLineColor = '#FE642E';
+
+      var map;
+      var markers = {};
+
+      function initMap() {
+        // Information of Location
+        var location = {lat:-33.4372, lng: -70.6506}
+        var options = {
+          zoom:4,
+          center: location
+        }
+
+        // The map centered at Location
+        map = new google.maps.Map(
+            document.getElementById('map'), options);
+      }
+
+      function changeMarkerPosition(marker, position, angle) {
+        var latlng = new google.maps.LatLng(position[0], position[1]);
+        marker.setPosition(latlng);
+        if (angle > 360){
+          angle = angle - 360
+        }
+        var planeSymbol = {
+            path: "M48.049 36.31c.523.169.951-.142.951-.692v-3.494c0-.55-.387-1.23-.859-1.512l-18.282-10.895c-.472-.281-.859-.962-.859-1.511v-12.206c0-.55-.168-1.417-.374-1.928 0 0-1.091-2.708-3-3.01-.204-.036-.411-.062-.619-.062h-.01c-.241-.002-.479.028-.713.072l-.216.048-.328.102c-1.588.53-2.406 2.835-2.406 2.835-.184.519-.334 1.393-.334 1.943v12.206c0 .55-.387 1.23-.859 1.512l-18.282 10.894c-.472.282-.859.962-.859 1.512v3.494c0 .55.428.861.951.691l18.098-5.875c.523-.169.951.142.951.692v9.533c0 .55-.36 1.271-.8 1.601l-2.4 1.802c-.44.33-.8 1.051-.8 1.601v2.337c0 .55.433.876.961.724l6.075-1.745c.528-.152 1.394-.152 1.922 0l6.081 1.745c.528.152.961-.174.961-.724v-2.338c0-.55-.36-1.271-.8-1.601l-2.4-1.802c-.439-.33-.8-1.051-.8-1.601v-9.533c0-.55.428-.861.951-.691l18.098 5.876z",
+            fillColor: planeColor,
+            fillOpacity: 1,
+            scale: 1,
+            strokeColor: planeColor,
+            strokeWeight: 1,
+            anchor: new google.maps.Point(25, 25),
+            rotation: angle + 100
+        };
+
+        console.log('DEGREE ' + angle)
+        marker.setIcon(planeSymbol);
+      };
+
+      function setMapOnAll(map) {
+        for (var i = 0; i < markers.length; i++) {
+          markers[i].setMap(map);
+        }
+      }
+
+      function addAirport(props, map){
+        var icon = {
+          url:'https://cdn2.iconfinder.com/data/icons/location-map-simplicity/512/airport-256.png', // url
+          scaledSize: new google.maps.Size(50, 50), // scaled size
+          anchor: new google.maps.Point(25, 50) // anchor
+        };
+        var marker = new google.maps.Marker({
+          icon: icon,
+          scale: 0.5,
+          position:props.coords,
+          map:map,
         });
 
-        socket.on('new message', function(data){
-          $chat.append('<div class = "well">'+data.msg+'</div>');
+        // Check content
+        if (props.content){
+          var infoWindow = new google.maps.InfoWindow({
+            content:props.content
+          });
+          marker.addListener('mouseover', function(){
+            infoWindow.open(map, marker);
+          });
+          marker.addListener('mouseout', function() {
+            infoWindow.close();
+          });
+        }
+
+      }
+
+      function removeLine(line) {
+        line.setMap(null);
+      }
+
+
+      function addPlane(props, map){
+        var tent = {
+            path: "M48.049 36.31c.523.169.951-.142.951-.692v-3.494c0-.55-.387-1.23-.859-1.512l-18.282-10.895c-.472-.281-.859-.962-.859-1.511v-12.206c0-.55-.168-1.417-.374-1.928 0 0-1.091-2.708-3-3.01-.204-.036-.411-.062-.619-.062h-.01c-.241-.002-.479.028-.713.072l-.216.048-.328.102c-1.588.53-2.406 2.835-2.406 2.835-.184.519-.334 1.393-.334 1.943v12.206c0 .55-.387 1.23-.859 1.512l-18.282 10.894c-.472.282-.859.962-.859 1.512v3.494c0 .55.428.861.951.691l18.098-5.875c.523-.169.951.142.951.692v9.533c0 .55-.36 1.271-.8 1.601l-2.4 1.802c-.44.33-.8 1.051-.8 1.601v2.337c0 .55.433.876.961.724l6.075-1.745c.528-.152 1.394-.152 1.922 0l6.081 1.745c.528.152.961-.174.961-.724v-2.338c0-.55-.36-1.271-.8-1.601l-2.4-1.802c-.439-.33-.8-1.051-.8-1.601v-9.533c0-.55.428-.861.951-.691l18.098 5.876z",
+            fillColor: planeColor,
+            fillOpacity: 1,
+            scale: 1,
+            strokeColor: planeColor,
+            strokeWeight: 1,
+            anchor: new google.maps.Point(10, 10),
+        };
+
+        var marker = new google.maps.Marker({
+          position:props.coords,
+          map:map,
+          icon: tent
         });
+
+
+        // Check content
+        if (props.content){
+          var infoWindow = new google.maps.InfoWindow({
+            content:props.content
+          });
+          marker.addListener('mouseover', function(){
+            infoWindow.open(map, marker);
+          });
+          marker.addListener('mouseout', function() {
+            infoWindow.close();
+          });
+        };
+        return marker;
+
+
+      }
+
+      // Iniciando conexion al socket
+      var socket = io.connect('wss://integracion-tarea-3.herokuapp.com', {
+        "path": "/flights"
       });
+
+      socket.emit('AIRPORTS', {'a':''});
+      socket.on('AIRPORTS', function(msg){
+        console.log('Airport: ' + msg);
+        var keys = Object.keys(msg);
+        for (var i = 0; i < keys.length; i++){
+          var airport = msg[keys[i]];
+          marker_data = {
+            coords: {lat:airport.airport_position[0], lng: airport.airport_position[1]},
+            content:'<h2>'+ airport.name + ' ('+ airport.airport_code +')' +'</h2>\n<h3>'+ airport.city +', ' + airport.country + ' ('+ airport.country_code +')' +'</h3>'
+          };
+          addAirport(marker_data, map);
+        };
+      });
+
+      var aviones = {};
+      var flight_pathsVuelos = {};
+      socket.emit('FLIGHTS', {'a':''});
+      socket.on('FLIGHTS', function(vuelos){
+        console.log('Flight: ' + vuelos[0].airline);
+        for (var i = 0; i < vuelos.length; i++){
+          var vuelo = vuelos[i];
+          var origin = vuelo.origin;
+          var destination = vuelo.destination;
+          var line_data = [
+            {lat: destination.airport_position[0], lng: destination.airport_position[1]},
+            {lat: origin.airport_position[0], lng: origin.airport_position[1]}
+          ];
+          var flightPath = new google.maps.Polyline({
+            path: line_data,
+            geodesic: true,
+            strokeColor: strokeColor,
+            strokeOpacity: 1.0,
+            strokeWeight: 8
+          });
+          if (flight_pathsVuelos[origin.code]){
+            flight_pathsVuelos[origin.code].push(flightPath);
+          }
+          else{
+            flight_pathsVuelos[origin.code] = [];
+            flight_pathsVuelos[origin.code].push(flightPath);
+          };
+          flightPath.setMap(map);
+
+          aviones[vuelo.code] = vuelo;
+          console.log('PLANE ' + aviones)
+
+        };
+      });
+
+      // Recibo la informacion del socket al hacer socket.on POSITION
+      var current_position = {};
+      var current_lines = {};
+      socket.on('POSITION', function(data){
+        console.log('Avion: '+ data.code +' Posicion: ' + data.position);
+        /*marker_data = {
+          coords: {lat:data.position[0], lng: data.position[1]},
+          iconImage:'https://developers.google.com/maps/documentation/javascript/examples/full/images/beachflag.png',
+          content:'<h1>'+ data.code +'</h1>'
+        };*/
+        if (markers[data.code]){
+          let angle = Math.PI + Math.atan2(current_position[data.code][0] - data.position[0], current_position[data.code][1] - data.position[1]);
+          //console.log(angle * 180 / Math.PI);
+          changeMarkerPosition(markers[data.code], data.position, angle * 180 / Math.PI);
+          var line_data = [
+            {lat: current_position[data.code][0], lng: current_position[data.code][1]},
+            {lat: data.position[0], lng: data.position[1]}
+          ];
+
+          var vuelo_avion = aviones[data.code];
+          if (Math.abs(current_position[data.code][0] - data.position[0]) > 10 || Math.abs(current_position[data.code][1] - data.position[1]) > 10){
+            setMapOnAll(null);
+            markers = {};
+            console.log('ARRIBADO');
+            socket.emit('FLIGHTS', {'a':''});
+            socket.emit('AIRPORTS', {'a':''});
+            current_position[data.code] = data.position;
+            for (var line = 0; line < current_lines[data.code].length; line++){
+              removeLine(current_lines[data.code][line]);
+              current_lines[data.code].splice(line, 1);
+            };
+            for (var flightLine = 0; flightLine < flight_pathsVuelos[vuelo_avion.origin.code].length; flightLine++){
+              removeLine(flight_pathsVuelos[vuelo_avion.origin.code][flightLine]);
+              flight_pathsVuelos[vuelo_avion.origin.code].splice(flightLine, 1);
+            }
+          }
+          else{
+            var flightPath = new google.maps.Polyline({
+              path: line_data,
+              geodesic: true,
+              strokeColor: planeLineColor,
+              strokeOpacity: 1.0,
+              strokeWeight: 7
+            });
+            if (current_lines[data.code]){
+              current_lines[data.code].push(flightPath);
+            }
+            else{
+              current_lines[data.code] = [];
+              current_lines[data.code].push(flightPath);
+            };
+
+            flightPath.setMap(map);
+            current_position[data.code] = data.position;
+          };
+
+
+
+        }
+        else{
+          current_position[data.code] = data.position;
+          var plane_data = aviones[data.code];
+          var information = {
+            coords: {lat:data.position[0], lng: data.position[1]},
+            content:'<h2>Vuelo '+ data.code + ' ('+ plane_data.airline +')' +'</h2>\n<h3>Salida: '+ plane_data.origin.name +'</h3>\n<h3>Llegada: '+ plane_data.destination.name +'</h3>\n<h3>Asientos: '+ plane_data.seats+'</h3>'
+          };
+          markers[data.code] = addPlane(information, map);
+        }
+      });
+
+    </script>
+    <script async defer
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBW9yZgKJUsNAQChayGv6s1K1S7Lf2-Erc&callback=initMap">
     </script>
   </body>
 </html>
